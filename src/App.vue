@@ -11,7 +11,7 @@
 }
 
 html {
-  font-size: calc(100vw / 100);
+  font-size: calc(100vh / 150);
 }
 </style>
 <script setup lang="ts">

@@ -1,6 +1,9 @@
 <template>
   <div>
-    <div>当前玩家: {{ board.currentPlayer }}</div>
+    <div flex="~ gap-10">
+      <div>当前玩家: {{ board.currentPlayer }}</div>
+      <button @click="board.restart">restart</button>
+    </div>
     <div class="row" v-for="(row,rowIndex) in board.pieces" :key="rowIndex" flex="~ center">
       <div
         w-20
@@ -53,12 +56,21 @@ class Board {
   }
 
   init() {
-    for (let i = 0; i < this.height - 1; i++) {
+    for (let i = 0; i <= this.height - 1; i++) {
       const row = this.pieces[i] = [] as Piece[];
-      for (let j = 0; j < this.width - 1; j++) {
+      for (let j = 0; j <= this.width - 1; j++) {
         row.push(new Piece(i, j));
       }
     }
+  }
+
+  restart() {
+    this.currentPlayer = Math.random() > 0.5 ? PIECES_STATE.WHITE : PIECES_STATE.BLACK;
+    this.pieces.forEach(row => {
+      row.forEach(piece => {
+        piece.state = PIECES_STATE.DEFAULT;
+      });
+    });
   }
 
   async checkWinner() {
@@ -90,6 +102,36 @@ class Board {
 
   async checkObliqueWinner() {
     return new Promise<PIECES_STATE | undefined>((resolve, reject) => {
+      const starts: { piece: Piece, state: PIECES_STATE, repeat: number }[] = [];
+      for (let i = 0; i < this.pieces.length - 4; i++) {
+        starts.push({ piece: this.pieces[i][0], state: PIECES_STATE.DEFAULT, repeat: 0 });
+      }
+      for (let i = 1; i < this.pieces[0].length - 4; i++) {
+        starts.push({ piece: this.pieces[0][i], state: PIECES_STATE.DEFAULT, repeat: 0 });
+      }
+      while (starts.length) {
+        for (let i = 0; i < starts.length; i++) {
+          const item = starts[i];
+          const { piece: prev } = item;
+          const { row, col } = prev;
+          const next = this.pieces[row + 1]?.[col + 1];
+          if (!next) {
+            starts.splice(i, 1);
+            continue;
+          }
+          if (next.state !== PIECES_STATE.DEFAULT && prev.state === next.state) {
+            item.repeat++;
+          } else {
+            item.state = next.state;
+            item.repeat = 1;
+          }
+          item.piece = next;
+          if (item.repeat >= 5) {
+            resolve(item.state);
+            return true;
+          }
+        }
+      }
       reject();
     });
   }
